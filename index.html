@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f58220">
+  <title>AmbulanMu Godean — Laporan Layanan</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="leaf leaf-a">🍃</div><div class="leaf leaf-b">🌿</div><div class="leaf leaf-c">🍃</div>
+  <header class="topbar">
+    <div class="brand">
+      <div class="ambulance">🚑</div>
+      <div><strong>AmbulanMu Godean</strong><small>Pelayanan • Kepedulian • Kemanusiaan</small></div>
+    </div>
+    <button class="menu-toggle" onclick="toggleNav()">☰</button>
+    <nav id="mainNav">
+      <button class="nav-btn active" data-page="dashboard">Dashboard</button>
+      <button class="nav-btn" data-page="input">Isi Laporan</button>
+      <button class="nav-btn" data-page="rekap">Rekap Data</button>
+      <button class="nav-btn" data-page="custom">Custom</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="page-dashboard" class="page active">
+      <div class="hero">
+        <div>
+          <span class="eyebrow">LAPORAN HARIAN</span>
+          <h1>Semangat melayani umat.</h1>
+          <p>Semua laporan driver terkumpul otomatis dalam satu rekap yang rapi.</p>
+        </div>
+        <div class="hero-ambulance">🚑</div>
+      </div>
+      <div class="datebar">
+        <button class="secondary" onclick="changeDay(-1)">←</button>
+        <input id="dashDate" type="date" onchange="refreshDashboard()">
+        <button class="secondary" onclick="changeDay(1)">→</button>
+        <button class="primary" onclick="go('input')">＋ Isi Laporan</button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><span>👤 Pasien</span><strong id="statPatients">0</strong><small>layanan hari ini</small></div>
+        <div class="stat-card"><span>💰 Kas Masuk</span><strong id="statIn">Rp 0</strong><small>total penerimaan</small></div>
+        <div class="stat-card"><span>💸 Kas Keluar</span><strong id="statOut">Rp 0</strong><small>total pengeluaran</small></div>
+        <div class="stat-card highlight"><span>🧾 Saldo</span><strong id="statBalance">Rp 0</strong><small>kas masuk − kas keluar</small></div>
+        <div class="stat-card"><span>🛣️ Jarak</span><strong id="statKm">0 km</strong><small>estimasi dari rute yang dicatat</small></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title"><h2>Ringkasan layanan</h2><span id="dashStatus" class="status">Memuat…</span></div>
+        <div id="todayList" class="report-list"></div>
+      </div>
+    </section>
+
+    <section id="page-input" class="page">
+      <div class="section-head">
+        <div><span class="eyebrow">INPUT CEPAT</span><h1>Isi Laporan Layanan</h1><p>Kolom wajib diberi tanda <b>*</b>. Lokasi dapat dicari dan dibuka langsung di Google Maps.</p></div>
+        <button class="secondary" onclick="duplicateYesterday()">⧉ Duplikat Kemarin</button>
+      </div>
+      <form id="reportForm" class="form-card">
+        <input type="hidden" id="reportId">
+        <div class="form-grid">
+          <label>Hari <input id="dayName" readonly></label>
+          <label>Tanggal * <input id="date" type="date" required></label>
+          <label>Waktu * <input id="time" type="time" required></label>
+          <label>Keperluan * <input id="purpose" required placeholder="Contoh: Jemput HD"></label>
+          <label>Nama pasien * <input id="patient" required placeholder="Nama lengkap"></label>
+          <label>Alamat pasien <input id="address" placeholder="Alamat rumah/pasien"></label>
+          <label class="full">Titik jemput * <input id="pickup" required placeholder="Ketik lokasi lalu pilih/cek Google Maps"></label>
+          <label class="full">Titik tujuan * <input id="destination" required placeholder="Rumah sakit / rumah pasien / tujuan"></label>
+          <div class="map-actions full">
+            <button type="button" class="map-btn" onclick="openMaps('pickup')">📍 Buka titik jemput di Maps</button>
+            <button type="button" class="map-btn" onclick="openMaps('destination')">🏥 Buka titik tujuan di Maps</button>
+            <button type="button" class="map-btn" onclick="openRoute()">🗺️ Lihat rute</button>
+          </div>
+          <label>Armada * <input id="vehicle" required placeholder="R1"></label>
+          <label>Crew * <select id="crew" required></select></label>
+          <label>Kas masuk <input id="cashIn" inputmode="numeric" placeholder="50.000"></label>
+          <label>Kas keluar <input id="cashOut" inputmode="numeric" placeholder="0"></label>
+          <label class="full manual-field">Keterangan kas keluar <textarea id="cashOutNote" rows="3" placeholder="Wajib diisi bila ada kas keluar, misalnya: Parkir Rp 5.000"></textarea></label>
+          <label class="full manual-field">Catatan / Note <textarea id="note" rows="3" placeholder="Keterangan tambahan layanan"></textarea></label>
+          <label class="full photo-field">Dokumentasi foto <input id="photo" type="file" accept="image/*" capture="environment"><small>Foto akan diperkecil otomatis sebelum dikirim agar upload lebih ringan.</small></label>
+          <div id="photoPreview" class="photo-preview full"></div>
+        </div>
+        <div class="form-footer">
+          <button type="button" class="secondary" onclick="resetForm()">Bersihkan</button>
+          <button class="primary" type="submit">💾 Simpan Laporan</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="page-rekap" class="page">
+      <div class="section-head">
+        <div><span class="eyebrow">ADMIN / REKAP</span><h1>Rekap Data Pelayanan</h1><p>Filter harian/bulanan, buka detail, salin WhatsApp, atau unduh Excel-compatible CSV.</p></div>
+        <div class="head-actions"><button class="secondary" onclick="copyAllWhatsApp()">📋 Salin WhatsApp</button><button class="primary" onclick="exportCSV()">⬇ Export Excel</button></div>
+      </div>
+      <div class="filterbar">
+        <label>Dari <input id="filterFrom" type="date"></label>
+        <label>Sampai <input id="filterTo" type="date"></label>
+        <label>Cari <input id="filterSearch" placeholder="Nama, crew, tujuan…"></label>
+        <button class="secondary" onclick="loadReports()">Terapkan</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Tanggal</th><th>Waktu</th><th>Pasien</th><th>Keperluan</th><th>Crew</th><th>Armada</th><th>Kas</th><th>KM</th><th>Aksi</th></tr></thead><tbody id="reportTable"></tbody></table></div>
+    </section>
+
+    <section id="page-custom" class="page">
+      <div class="section-head"><div><span class="eyebrow">PERSONALISASI</span><h1>Custom Tampilan</h1><p>Pengaturan ini hanya mengubah tampilan di perangkat/browser ini. Data laporan lama tidak diubah.</p></div></div>
+      <div class="custom-grid">
+        <div class="form-card">
+          <h2>Urutan menu</h2>
+          <p class="muted">Atur urutan navigasi. Gunakan tombol panah.</p>
+          <div id="navOrder"></div>
+          <button class="primary" onclick="saveNavOrder()">Simpan tata letak</button>
+        </div>
+        <div class="form-card">
+          <h2>Elemen dashboard</h2>
+          <label><input type="checkbox" data-pref="hero" checked> Tampilkan banner</label>
+          <label><input type="checkbox" data-pref="stats" checked> Tampilkan kartu statistik</label>
+          <label><input type="checkbox" data-pref="daily" checked> Tampilkan daftar layanan</label>
+          <button class="primary" onclick="savePrefs()">Simpan preferensi</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <b>Tetap semangat melayani umat</b><br>
+    <span>Memberi untuk Negeri</span>
+  </footer>
+
+  <div id="modal" class="modal" onclick="closeModal(event)"><div class="modal-card" onclick="event.stopPropagation()"><button class="modal-close" onclick="hideModal()">×</button><div id="modalContent"></div></div></div>
+  <div id="toast" class="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>
