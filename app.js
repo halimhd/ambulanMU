@@ -111,7 +111,7 @@ function formatWa(r){
 
 *Hari*               : *${hari}*
 *Tanggal*        : *${formatDate(r.tanggal)}*
-*Waktu*            : *${r.waktu || ''}wib*
+*Waktu*            : *${formatTime(r.waktu)}wib*
 *Keperluan*     : *${r.keperluan || ''}*
 *Nama*             : *${r.nama || ''}*
 *Alamat*           : *${r.alamat || ''}*
@@ -130,7 +130,52 @@ function formatWa(r){
 }
 function formatDate(s){
   if(!s) return '';
-  const [y,m,d]=s.split('-'); return `${d}-${m}-${y}`;
+
+  const str = String(s);
+
+  // Format YYYY-MM-DD
+  const simple = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(simple){
+    return `${simple[3]}-${simple[2]}-${simple[1]}`;
+  }
+
+  // Format ISO dari Google Sheets
+  const iso = new Date(str);
+  if(!isNaN(iso.getTime())){
+    return iso.toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: 'Asia/Jakarta'
+    }).replace(/\//g, '-');
+  }
+
+  return str;
+}
+
+function formatTime(s){
+  if(!s) return '';
+
+  const str = String(s);
+
+  // Jika sudah HH:mm
+  if(/^\d{1,2}:\d{2}$/.test(str)){
+    return str;
+  }
+
+  // Jika waktu dikirim sebagai tanggal ISO dari Google Sheets
+  const d = new Date(str);
+  if(!isNaN(d.getTime())){
+    return d.toLocaleTimeString('id-ID', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'Asia/Jakarta'
+    });
+  }
+
+  return str;
+}
 }
 async function saveReport(e){
   e.preventDefault();
