@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f47b20">
+  <title>AmbulanMu Godean</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="leaf leaf1">🍃</div><div class="leaf leaf2">🌿</div>
+  <header class="hero">
+    <div class="ambulance">🚑</div>
+    <div>
+      <h1>AmbulanMu Godean</h1>
+      <p>Pelayanan • Rekap • Kas • Jarak Tempuh</p>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="driver">📝 Isi Laporan</button>
+    <button class="tab" data-tab="today">📊 Rekap Hari Ini</button>
+    <button class="tab" data-tab="admin">⚙️ Custom Master</button>
+  </nav>
+
+  <main>
+    <section id="driver" class="panel active">
+      <div class="section-head">
+        <div><h2>Laporan Layanan</h2><small>Tanpa login — isi lalu kirim.</small></div>
+        <button class="secondary" id="duplicateBtn">⚡ Duplikat HD Kemarin</button>
+      </div>
+
+      <div id="quickPatients" class="quick-list hidden"></div>
+
+      <form id="reportForm">
+        <div class="grid">
+          <label>Hari<input id="hari" readonly></label>
+          <label>Tanggal<input id="tanggal" type="date" required></label>
+          <label>Waktu<input id="waktu" type="time" required></label>
+          <label>Keperluan<select id="keperluan"></select><input id="keperluanManual" class="manual hidden" placeholder="Ketik keperluan lainnya"></label>
+          <label>Nama Pasien<input id="nama" required placeholder="Nama pasien"></label>
+          <label>Alamat<input id="alamat" required placeholder="Alamat pasien"></label>
+          <label>Titik Jemput<div class="locrow"><input id="jemput" required placeholder="Contoh: RS PKU Kota"><button type="button" class="mapbtn" data-map="jemput">📍 Maps</button></div></label>
+          <label>Titik Tujuan<div class="locrow"><input id="tujuan" required placeholder="Contoh: Gamping Tengah"><button type="button" class="mapbtn" data-map="tujuan">📍 Maps</button></div></label>
+          <label>Armada<select id="armada"></select><input id="armadaManual" class="manual hidden" placeholder="Ketik armada"></label>
+          <label>Crew<select id="crew"></select><input id="crewManual" class="manual hidden" placeholder="Ketik nama crew"></label>
+          <label>Kas Masuk (Rp)<input id="kasMasuk" inputmode="numeric" placeholder="50.000"></label>
+          <label>Kas Keluar (Rp)<input id="kasKeluar" inputmode="numeric" placeholder="0"></label>
+          <label>Ket. Kas Keluar<textarea id="ketKasKeluar" placeholder="Keterangan pengeluaran"></textarea></label>
+          <label>KM Layanan<input id="km" type="number" min="0" step="0.1" placeholder="Otomatis dari rute / bisa dikoreksi"></label>
+          <label class="wide">Note<textarea id="note" placeholder="Catatan layanan"></textarea></label>
+          <label class="wide">Dokumentasi Foto<input id="foto" type="file" accept="image/*" capture="environment"></label>
+        </div>
+
+        <div class="route-card">
+          <div>
+            <b>🗺️ Rute layanan</b>
+            <p class="muted">Klik tombol Maps untuk membuka lokasi di Google Maps. KM akan dicoba dihitung otomatis oleh server.</p>
+          </div>
+          <div id="routeLinks"></div>
+        </div>
+
+        <button class="primary big" type="submit">🚑 Simpan Laporan</button>
+        <div id="status" class="status"></div>
+      </form>
+    </section>
+
+    <section id="today" class="panel">
+      <div class="section-head">
+        <div><h2>Dashboard Harian</h2><small id="todayLabel"></small></div>
+        <div class="admin-actions"><input id="adminDate" type="date"><button class="secondary" id="exportBtn">⬇️ Export Excel (.xlsx)</button></div>
+      </div>
+      <div class="cards">
+        <div class="stat"><span>👤 Banyak layanan pasien</span><strong id="sPatients">0</strong></div>
+        <div class="stat"><span>💰 Kas masuk</span><strong id="sIn">Rp0</strong></div>
+        <div class="stat"><span>💸 Kas keluar</span><strong id="sOut">Rp0</strong></div>
+        <div class="stat"><span>🧮 Saldo</span><strong id="sBalance">Rp0</strong></div>
+        <div class="stat"><span>🚑 Total jarak</span><strong id="sKm">0 km</strong></div>
+      </div>
+      <div id="reports" class="reports"></div>
+    </section>
+
+    <section id="admin" class="panel">
+      <div class="section-head"><div><h2>Custom Master & Tampilan</h2><small>Pengaturan master tersimpan di Google Sheets sehingga perangkat lain mengikuti.</small></div></div>
+      <div class="admin-box">
+        <label>Token Admin<input id="adminToken" type="password" placeholder="Masukkan token dari Code.gs"></label>
+        <div class="master-grid">
+          <label>Keperluan<textarea id="mKeperluan"></textarea></label>
+          <label>Nama Crew<textarea id="mCrew"></textarea></label>
+          <label>Armada<textarea id="mArmada"></textarea></label>
+        </div>
+        <label>Kalimat motivasi<textarea id="mMotivation">Tetap semangat melayani umat,
+Memberi untuk Negeri</textarea></label>
+        <button class="primary" id="saveMaster">💾 Simpan Master</button>
+        <div id="adminStatus" class="status"></div>
+      </div>
+      <div class="warning">Catatan: website driver memang terbuka tanpa login. Jangan menaruh data rahasia di GitHub. Data pasien disimpan di Google Sheets/Drive, bukan di repository.</div>
+    </section>
+  </main>
+
+  <div id="photoModal" class="modal hidden">
+    <div class="modal-box">
+      <button class="close" id="closeModal">×</button>
+      <img id="modalImg" alt="Dokumentasi layanan">
+      <div id="modalCaption"></div>
+    </div>
+  </div>
+
+  <footer>
+    <b>Tetap semangat melayani umat</b><br>
+    Memberi untuk Negeri
+  </footer>
+  <script src="app.js"></script>
+</body>
+</html>
