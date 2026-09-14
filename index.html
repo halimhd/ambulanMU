@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f7931e">
+<title>AmbulanMu Godean — Laporan Layanan</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+<div class="brand"><span class="logo">🚑</span><span><b>AmbulanMu Godean</b><small>Laporan Layanan</small></span></div>
+<nav>
+<button class="nav active" data-page="form">📝 Isi Laporan</button>
+<button class="nav" data-page="rekap">📊 Rekap</button>
+<button class="nav" data-page="master">⚙️ Master</button>
+</nav>
+</header>
+
+<main>
+<section id="page-form" class="page active">
+<div class="hero"><div><span class="eyebrow">🚑 Sistem Rekap Pelayanan</span>
+<h1>Laporan Layanan<br>AmbulanMu Godean</h1>
+<p>Isi satu kali dari HP. Data tersusun rapi untuk kebutuhan admin dan rekap harian.</p></div><div class="ambulance">🚑</div></div>
+
+<div class="quick"><div><b>⚡ Isi Cepat HD Rutin</b><small>Cari laporan HD kemarin lalu duplikat.</small></div>
+<button class="btn green" id="quickHd">Cari HD Kemarin</button></div>
+
+<form id="form" class="card">
+<div class="grid two">
+<label>Hari<input id="hari" readonly></label>
+<label>Tanggal *<input id="tanggal" type="date" required></label>
+<label>Waktu *<input id="waktu" type="time" required></label>
+<label>Keperluan *<select id="keperluan" required></select></label>
+</div>
+<label>Nama Pasien *<input id="nama" required placeholder="Contoh: Mujiman"></label>
+<label>Alamat<textarea id="alamat" rows="2" placeholder="Alamat pasien"></textarea></label>
+<div class="grid two">
+<label>Titik Jemput<input id="jemput" placeholder="Contoh: RS PKU KOTA"></label>
+<label>Titik Tujuan<input id="tujuan" placeholder="Contoh: Gamping Tengah"></label>
+</div>
+<div class="actions">
+<button type="button" class="btn outline" id="route">📍 Buka Rute Google Maps</button>
+<button type="button" class="btn outline" id="tujuanMap">🏥 Buka Lokasi Tujuan</button>
+</div>
+<div class="grid two">
+<label>Armada *<select id="armada" required></select></label>
+<label>Crew *<select id="crew" required></select></label>
+</div>
+<div class="grid two">
+<label>Kas Masuk (Rp)<input id="masuk" type="number" min="0" value="0"></label>
+<label>Kas Keluar (Rp)<input id="keluar" type="number" min="0" value="0"></label>
+</div>
+<label>Ket. Kas Keluar<input id="ket" placeholder="Contoh: parkir, tol, BBM, dll."></label>
+<label>Jarak Tempuh (KM)<input id="km" type="number" min="0" step=".1" value="0"></label>
+<label>Note<textarea id="note" rows="2" placeholder="Catatan layanan"></textarea></label>
+<label>Dokumentasi Foto<input id="foto" type="file" accept="image/*" capture="environment">
+<small>Pratinjau tersedia pada tahap ini. Penyimpanan ke Google Drive diaktifkan saat backend dipasang.</small>
+<img id="preview" class="preview hide"></label>
+<div class="motivation"><b>Tetap semangat melayani umat,</b><br><b>Memberi untuk Negeri</b></div>
+<div class="actions"><button type="reset" class="btn light">↻ Bersihkan</button><button class="btn orange">💾 Simpan Laporan</button></div>
+</form>
+</section>
+
+<section id="page-rekap" class="page">
+<div class="title"><div><h2>📊 Rekap Laporan</h2><p>Dashboard dan daftar laporan pelayanan.</p></div>
+<div class="actions"><button class="btn green" id="refresh">↻ Muat ulang</button><button class="btn orange" id="excel">↓ Export Excel</button></div></div>
+<div class="stats">
+<div><span>🚑 Layanan</span><b id="sLayanan">0</b><small>hari terpilih</small></div>
+<div><span>💰 Kas Masuk</span><b id="sMasuk">Rp0</b><small>total</small></div>
+<div><span>💸 Kas Keluar</span><b id="sKeluar">Rp0</b><small>total</small></div>
+<div><span>💵 Saldo</span><b id="sSaldo">Rp0</b><small>masuk − keluar</small></div>
+<div><span>🚑 Jarak</span><b id="sKm">0 KM</b><small>total perjalanan</small></div>
+</div>
+<div class="card filters"><div class="grid three">
+<label>Dari<input id="dari" type="date"></label><label>Sampai<input id="sampai" type="date"></label>
+<label>Cari<input id="cari" placeholder="Nama / crew / tujuan / keperluan"></label></div>
+<div class="actions"><button class="btn orange" id="filter">🔎 Tampilkan</button><button class="btn light" id="copyAll">📋 Salin Rekap WA</button></div></div>
+<div class="card table"><div class="scroll"><table><thead><tr><th>Tanggal</th><th>Waktu</th><th>Nama</th><th>Keperluan</th><th>Rute</th><th>Armada</th><th>Crew</th><th>Kas</th><th>KM</th><th>Aksi</th></tr></thead><tbody id="rows"></tbody></table></div></div>
+</section>
+
+<section id="page-master" class="page">
+<div class="title"><div><h2>⚙️ Master Data</h2><p>Daftar yang dipakai bersama semua driver.</p></div></div>
+<div class="card">
+<label>Daftar Crew<textarea id="mCrew" rows="7"></textarea></label>
+<label>Daftar Armada<textarea id="mArmada" rows="5"></textarea></label>
+<label>Daftar Keperluan<textarea id="mKeperluan" rows="8"></textarea></label>
+<button class="btn orange full" id="saveMaster">💾 Simpan Master</button>
+<small>Versi ini adalah frontend/demo. Setelah backend Google Apps Script dipasang, Master menjadi terpusat dan dapat diperbarui untuk HP lain.</small>
+</div>
+</section>
+</main>
+
+<footer>🚑 AmbulanMu Godean · Tetap semangat melayani umat · Memberi untuk Negeri</footer>
+<div id="modal" class="modal hide"><div class="modalbox"><button id="close">×</button><h3 id="mtitle"></h3><div id="mbody"></div></div></div>
+<script src="app.js"></script>
+</body></html>
