@@ -1,59 +1,235 @@
 const API_URL = 'https://script.google.com/macros/s/AKfycbx2CzAo9upkpddYsHE0Tk1VBRUrw0lJLOmgt6_4QnG_vQwl8QcG-yi6Qjm1sJAKpxRy/exec';
+
+const KEY = 'amgodean_demo_v1';
+
+const DEFAULT_MASTER = {
+  crew: ['Rehan','David','Halim','Furi','Wahid'],
+  armada: ['R1','R2'],
+  keperluan: [
+    'Jemput HD',
+    'Antar HD',
+    'Rujukan',
+    'Antar/Jemput Pasien',
+    'Laka',
+    'Kontrol',
+    'Jenazah',
+    'Lainnya'
+  ]
+};
+
+let saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+
+let state = {
+  master: {
+    crew: saved?.master?.crew?.length ? saved.master.crew : [...DEFAULT_MASTER.crew],
+    armada: saved?.master?.armada?.length ? saved.master.armada : [...DEFAULT_MASTER.armada],
+    keperluan: saved?.master?.keperluan?.length ? saved.master.keperluan : [...DEFAULT_MASTER.keperluan]
+  },
+  reports: Array.isArray(saved?.reports) ? saved.reports : []
+};
+
+const $ = id => document.getElementById(id);
+
+const save = () => {
+  localStorage.setItem(KEY, JSON.stringify(state));
+};
+
+const iso = () => {
+  let d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0,10);
+};
+
+const fd = s => {
+  if(!s) return '';
+  let [y,m,d] = s.split('-');
+  return d + '-' + m + '-' + y;
+};
+
+const rp = n => 'Rp' + Number(n || 0).toLocaleString('id-ID');
+
+const esc = s => String(s ?? '').replace(
+  /[&<>"']/g,
+  x => ({
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    '"':'&quot;',
+    "'":'&#39;'
+  }[x])
+);
+
+function setOpts(id, arr){
+  const el = $(id);
+  if(!el) return;
+
+  el.innerHTML =
+    '<option value="">Pilih...</option>' +
+    arr.map(x => '<option value="' + esc(x) + '">' + esc(x) + '</option>').join('');
+}
+
+function master(){
+
+  setOpts('keperluan', state.master.keperluan);
+  setOpts('armada', state.master.armada);
+  setOpts('crew', state.master.crew);
+
+  if($('mCrew'))
+    $('mCrew').value = state.master.crew.join('\n');
+
+  if($('mArmada'))
+    $('mArmada').value = state.master.armada.join('\n');
+
+  if($('mKeperluan'))
+    $('mKeperluan').value = state.master.keperluan.join('\n');
+}
+
+function hari(){
+  let d = $('tanggal').value;
+
+  return d
+    ? new Intl.DateTimeFormat('id-ID',{
+        weekday:'long'
+      }).format(new Date(d + 'T12:00:00'))
+    : '';
+}
+
+function today(){
+
+  let t = iso();
+
+  $('tanggal').value = t;
+  $('hari').value = hari();
+
+  $('waktu').value =
+    new Date().toLocaleTimeString('id-ID',{
+      hour:'2-digit',
+      minute:'2-digit',
+      hour12:false
+    });
+
+  $('dari').value = t;
+  $('sampai').value = t;
+}
+
+function data(){
+
+  return {
+    id: crypto.randomUUID(),
+
+    hari: $('hari').value,
+    tanggal: $('tanggal').value,
+    waktu: $('waktu').value,
+
+    keperluan: $('keperluan').value,
+    nama: $('nama').value.trim(),
+    alamat: $('alamat').value.trim(),
+
+    jemput: $('jemput').value.trim(),
+    tujuan: $('tujuan').value.trim(),
+
+    armada: $('armada').value,
+    crew: $('crew').value,
+
+    kasMasuk: +$('masuk').value || 0,
+    kasKeluar: +$('keluar').value || 0,
+
+    ketKasKeluar: $('ket').value.trim(),
+
+    km: +$('km').value || 0,
+
+    note: $('note').value.trim(),
+
+    foto: $('preview').src || ''
+  };
+}
+
 async function apiGet(action){
-  const res = await fetch(API_URL + '?action=' + encodeURIComponent(action));
+
+  const res = await fetch(
+    API_URL + '?action=' + encodeURIComponent(action)
+  );
+
   const text = await res.text();
 
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch(e) {
-    throw new Error('Respons server bukan JSON: ' + text.slice(0,200));
+  let result;
+
+  try{
+    result = JSON.parse(text);
+  }catch(e){
+    throw new Error(
+      'Respons server bukan JSON: ' +
+      text.slice(0,200)
+    );
   }
 
-  if(!data.ok){
-    throw new Error(data.error || 'Server error');
+  if(!result.ok){
+    throw new Error(
+      result.error || 'Server error'
+    );
   }
 
-  return data;
+  return result;
 }
 
 async function loadCloud(){
+
   try{
-    const [reportsData, masterData] = await Promise.all([
-      apiGet('reports'),
-      apiGet('master')
-    ]);
+
+    const reportsData = await apiGet('reports');
+    const masterData = await apiGet('master');
 
     state.reports = reportsData.reports || [];
 
     if(masterData.master){
-  if(Array.isArray(masterData.master.crew) && masterData.master.crew.length){
-    state.master.crew = masterData.master.crew;
-  }
 
-  if(Array.isArray(masterData.master.armada) && masterData.master.armada.length){
-    state.master.armada = masterData.master.armada;
-  }
+      if(
+        Array.isArray(masterData.master.crew) &&
+        masterData.master.crew.length > 0
+      ){
+        state.master.crew = masterData.master.crew;
+      }
 
-  if(Array.isArray(masterData.master.keperluan) && masterData.master.keperluan.length){
-    state.master.keperluan = masterData.master.keperluan;
-  }
-}
+      if(
+        Array.isArray(masterData.master.armada) &&
+        masterData.master.armada.length > 0
+      ){
+        state.master.armada = masterData.master.armada;
+      }
+
+      if(
+        Array.isArray(masterData.master.keperluan) &&
+        masterData.master.keperluan.length > 0
+      ){
+        state.master.keperluan = masterData.master.keperluan;
+      }
+
+    }
 
     save();
     master();
     render();
 
     console.log('Data Google Spreadsheet berhasil dimuat');
+
   }catch(err){
-    console.error('Gagal mengambil data online:', err);
-    alert('Data online belum dapat dimuat. Periksa koneksi atau URL Apps Script.');
+
+    console.error(
+      'Gagal mengambil data online:',
+      err
+    );
+
+    // Jangan kosongkan master jika server belum tersedia
+    master();
+
   }
 }
 
 async function saveCloud(report){
+
   const payload = {
     action: 'saveReport',
+
     report: {
       ...report,
       photoBase64: report.foto || '',
@@ -61,45 +237,16 @@ async function saveCloud(report){
     }
   };
 
-  await fetch(API_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: {
-      'Content-Type': 'text/plain;charset=utf-8'
+  await fetch(API_URL,{
+    method:'POST',
+    mode:'no-cors',
+
+    headers:{
+      'Content-Type':'text/plain;charset=utf-8'
     },
-    body: JSON.stringify(payload)
+
+    body:JSON.stringify(payload)
   });
-}
-const KEY='amgodean_demo_v1';
-let state=JSON.parse(localStorage.getItem(KEY)||'null')||{master:{crew:['Rehan','David','Halim','Furi','Wahid'],armada:['R1','R2'],keperluan:['Jemput HD','Antar HD','Rujukan','Antar/Jemput Pasien','Laka','Kontrol','Jenazah','Lainnya']},reports:[]};
-const $=id=>document.getElementById(id), save=()=>localStorage.setItem(KEY,JSON.stringify(state));
-const iso=()=>{let d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)};
-const fd=s=>{if(!s)return'';let[y,m,d]=s.split('-');return d+'-'+m+'-'+y};
-const rp=n=>'Rp'+Number(n||0).toLocaleString('id-ID');
-const esc=s=>String(s??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
-function setOpts(id,a){$(id).innerHTML='<option value="">Pilih...</option>'+a.map(x=>'<option>'+esc(x)+'</option>').join('')}
-function master(){setOpts('keperluan',state.master.keperluan);setOpts('armada',state.master.armada);setOpts('crew',state.master.crew);$('mCrew').value=state.master.crew.join('\n');$('mArmada').value=state.master.armada.join('\n');$('mKeperluan').value=state.master.keperluan.join('\n')}
-function hari(){let d=$('tanggal').value;return d?new Intl.DateTimeFormat('id-ID',{weekday:'long'}).format(new Date(d+'T12:00:00')):''}
-function data(){
-  return {
-    id: crypto.randomUUID(),
-    hari: $('hari').value,
-    tanggal: $('tanggal').value,
-    waktu: $('waktu').value,
-    keperluan: $('keperluan').value,
-    nama: $('nama').value.trim(),
-    alamat: $('alamat').value.trim(),
-    jemput: $('jemput').value.trim(),
-    tujuan: $('tujuan').value.trim(),
-    armada: $('armada').value,
-    crew: $('crew').value,
-    kasMasuk: +$('masuk').value || 0,
-    kasKeluar: +$('keluar').value || 0,
-    ketKasKeluar: $('ket').value.trim(),
-    km: +$('km').value || 0,
-    note: $('note').value.trim(),
-    foto: $('preview').src || ''
-  };
 }
 function data(){return{id:crypto.randomUUID(),hari:$('hari').value,tanggal:$('tanggal').value,waktu:$('waktu').value,keperluan:$('keperluan').value,nama:$('nama').value.trim(),alamat:$('alamat').value.trim(),jemput:$('jemput').value.trim(),tujuan:$('tujuan').value.trim(),armada:$('armada').value,crew:$('crew').value,kasMasuk:+$('masuk').value||0,kasKeluar:+$('keluar').value||0,ketKasKeluar:$('ket').value.trim(),km:+$('km').value||0,note:$('note').value.trim(),foto:$('preview').src||''}}
 function wa(r){return`Laporan Layanan AmbulanMu Godean\n\n*Hari*\n: *${r.hari}*\n\n*Tanggal* : *${fd(r.tanggal)}*\n\n*Waktu*\n: *${r.waktu}wib*\n\n*Keperluan* : *${r.keperluan}*\n\n*Nama*\n: *${r.nama}*\n\n*Alamat*\n: *${r.alamat||'-'}*\n\n*Titik jemput* : *${r.jemput||'-'}*\n\n*Titik Tujuan* : *${r.tujuan||'-'}*\n\n*Armada* : *${r.armada}*\n\n*Crew*\n: *${r.crew}*\n\n*Kas Masuk* : *${rp(r.kasMasuk)}*\n\n*Kas keluar* : *${rp(r.kasKeluar)}*\n\n*Ket.Kas keluar* : *${r.ketKasKeluar||'-'}*\n\n*Note*\n: *${r.note||'-'}*\n\n*Jarak Tempuh* : *${r.km||0} KM*\n\n*Tetap semangat melayani umat*,\n\n*Memberi untuk Negeri*`}
