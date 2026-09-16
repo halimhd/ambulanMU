@@ -1,3 +1,69 @@
+const API_URL = 'https://script.google.com/macros/s/AKfycbx2CzAo9upkpddYsHE0Tk1VBRUrw0lJLOmgt6_4QnG_vQwl8QcG-yi6Qjm1sJAKpxRy/exec';
+async function apiGet(action){
+  const res = await fetch(API_URL + '?action=' + encodeURIComponent(action));
+  const text = await res.text();
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch(e) {
+    throw new Error('Respons server bukan JSON: ' + text.slice(0,200));
+  }
+
+  if(!data.ok){
+    throw new Error(data.error || 'Server error');
+  }
+
+  return data;
+}
+
+async function loadCloud(){
+  try{
+    const [reportsData, masterData] = await Promise.all([
+      apiGet('reports'),
+      apiGet('master')
+    ]);
+
+    state.reports = reportsData.reports || [];
+
+    if(masterData.master){
+      state.master = {
+        crew: masterData.master.crew || state.master.crew,
+        armada: masterData.master.armada || state.master.armada,
+        keperluan: masterData.master.keperluan || state.master.keperluan
+      };
+    }
+
+    save();
+    master();
+    render();
+
+    console.log('Data Google Spreadsheet berhasil dimuat');
+  }catch(err){
+    console.error('Gagal mengambil data online:', err);
+    alert('Data online belum dapat dimuat. Periksa koneksi atau URL Apps Script.');
+  }
+}
+
+async function saveCloud(report){
+  const payload = {
+    action: 'saveReport',
+    report: {
+      ...report,
+      photoBase64: report.foto || '',
+      photoMime: 'image/jpeg'
+    }
+  };
+
+  await fetch(API_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8'
+    },
+    body: JSON.stringify(payload)
+  });
+}
 const KEY='amgodean_demo_v1';
 let state=JSON.parse(localStorage.getItem(KEY)||'null')||{master:{crew:['Rehan','David','Halim','Furi','Wahid'],armada:['R1','R2'],keperluan:['Jemput HD','Antar HD','Rujukan','Antar/Jemput Pasien','Laka','Kontrol','Jenazah','Lainnya']},reports:[]};
 const $=id=>document.getElementById(id), save=()=>localStorage.setItem(KEY,JSON.stringify(state));
@@ -8,7 +74,27 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&
 function setOpts(id,a){$(id).innerHTML='<option value="">Pilih...</option>'+a.map(x=>'<option>'+esc(x)+'</option>').join('')}
 function master(){setOpts('keperluan',state.master.keperluan);setOpts('armada',state.master.armada);setOpts('crew',state.master.crew);$('mCrew').value=state.master.crew.join('\n');$('mArmada').value=state.master.armada.join('\n');$('mKeperluan').value=state.master.keperluan.join('\n')}
 function hari(){let d=$('tanggal').value;return d?new Intl.DateTimeFormat('id-ID',{weekday:'long'}).format(new Date(d+'T12:00:00')):''}
-function today(){let t=iso();$('tanggal').value=t;$('hari').value=hari();$('waktu').value=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',hour12:false});$('dari').value=t;$('sampai').value=t}
+function data(){
+  return {
+    id: crypto.randomUUID(),
+    hari: $('hari').value,
+    tanggal: $('tanggal').value,
+    waktu: $('waktu').value,
+    keperluan: $('keperluan').value,
+    nama: $('nama').value.trim(),
+    alamat: $('alamat').value.trim(),
+    jemput: $('jemput').value.trim(),
+    tujuan: $('tujuan').value.trim(),
+    armada: $('armada').value,
+    crew: $('crew').value,
+    kasMasuk: +$('masuk').value || 0,
+    kasKeluar: +$('keluar').value || 0,
+    ketKasKeluar: $('ket').value.trim(),
+    km: +$('km').value || 0,
+    note: $('note').value.trim(),
+    foto: $('preview').src || ''
+  };
+}
 function data(){return{id:crypto.randomUUID(),hari:$('hari').value,tanggal:$('tanggal').value,waktu:$('waktu').value,keperluan:$('keperluan').value,nama:$('nama').value.trim(),alamat:$('alamat').value.trim(),jemput:$('jemput').value.trim(),tujuan:$('tujuan').value.trim(),armada:$('armada').value,crew:$('crew').value,kasMasuk:+$('masuk').value||0,kasKeluar:+$('keluar').value||0,ketKasKeluar:$('ket').value.trim(),km:+$('km').value||0,note:$('note').value.trim(),foto:$('preview').src||''}}
 function wa(r){return`Laporan Layanan AmbulanMu Godean\n\n*Hari*\n: *${r.hari}*\n\n*Tanggal* : *${fd(r.tanggal)}*\n\n*Waktu*\n: *${r.waktu}wib*\n\n*Keperluan* : *${r.keperluan}*\n\n*Nama*\n: *${r.nama}*\n\n*Alamat*\n: *${r.alamat||'-'}*\n\n*Titik jemput* : *${r.jemput||'-'}*\n\n*Titik Tujuan* : *${r.tujuan||'-'}*\n\n*Armada* : *${r.armada}*\n\n*Crew*\n: *${r.crew}*\n\n*Kas Masuk* : *${rp(r.kasMasuk)}*\n\n*Kas keluar* : *${rp(r.kasKeluar)}*\n\n*Ket.Kas keluar* : *${r.ketKasKeluar||'-'}*\n\n*Note*\n: *${r.note||'-'}*\n\n*Jarak Tempuh* : *${r.km||0} KM*\n\n*Tetap semangat melayani umat*,\n\n*Memberi untuk Negeri*`}
 async function copy(t){try{await navigator.clipboard.writeText(t);alert('Format WhatsApp sudah disalin.')}catch(e){prompt('Salin teks berikut:',t)}}
@@ -19,7 +105,52 @@ function photo(id){let r=state.reports.find(x=>x.id===id);if(r){$('mtitle').text
 function quick(){let d=new Date();d.setDate(d.getDate()-1);let y=d.toISOString().slice(0,10),a=state.reports.filter(r=>r.tanggal===y&&/hd/i.test(r.keperluan));if(!a.length)return alert('Tidak ditemukan laporan HD kemarin.');$('mtitle').textContent='Pilih pasien HD kemarin';$('mbody').innerHTML=a.map(r=>`<div class="choice"><span><b>${esc(r.nama)}</b><br><small>${esc(r.keperluan)} · ${esc(r.tujuan)}</small></span><button onclick="dup('${r.id}')">Duplikat</button></div>`).join('');$('modal').classList.remove('hide')}
 function dup(id){let r=state.reports.find(x=>x.id===id);if(!r)return;$('tanggal').value=iso();$('hari').value=hari();['keperluan','nama','alamat','jemput','tujuan','armada','crew','ket','note'].forEach(k=>{let map={ket:'ketKasKeluar',note:'note'};$(k).value=r[map[k]||k]||''});$('masuk').value=r.kasMasuk||0;$('keluar').value=r.kasKeluar||0;$('km').value=r.km||0;$('modal').classList.add('hide');window.scrollTo({top:0,behavior:'smooth'});alert('Laporan kemarin sudah diduplikat. Periksa waktu, kas dan KM sebelum menyimpan.')}
 $('tanggal').onchange=()=>$('hari').value=hari();
-$('form').onsubmit=e=>{e.preventDefault();let r=data();if(!r.nama||!r.keperluan||!r.armada||!r.crew)return alert('Lengkapi kolom wajib.');state.reports.push(r);save();alert('Laporan tersimpan pada mode demo perangkat ini.');e.target.reset();$('preview').src='';$('preview').classList.add('hide');today();master();render()};
+$('form').onsubmit = async e => {
+  e.preventDefault();
+
+  let r = data();
+
+  if(!r.nama || !r.keperluan || !r.armada || !r.crew){
+    return alert('Lengkapi kolom wajib.');
+  }
+
+  const btn = $('form').querySelector('button[type="submit"]');
+
+  if(btn){
+    btn.disabled = true;
+    btn.textContent = 'Menyimpan...';
+  }
+
+  try{
+    await saveCloud(r);
+
+    // Simpan sementara juga di browser ini
+    state.reports.push(r);
+    save();
+
+    alert('Laporan berhasil dikirim ke Google Spreadsheet.');
+
+    e.target.reset();
+    $('preview').src = '';
+    $('preview').classList.add('hide');
+
+    today();
+    master();
+    render();
+
+    // Ambil ulang data dari server setelah beberapa saat
+    setTimeout(loadCloud, 1500);
+
+  }catch(err){
+    console.error(err);
+    alert('Gagal mengirim laporan: ' + err.message);
+  }finally{
+    if(btn){
+      btn.disabled = false;
+      btn.textContent = 'Simpan Laporan';
+    }
+  }
+};
 $('form').onreset=()=>setTimeout(()=>{today();master()},0);
 $('foto').onchange=e=>{let f=e.target.files[0];if(!f)return;let rd=new FileReader();rd.onload=()=>{$('preview').src=rd.result;$('preview').classList.remove('hide')};rd.readAsDataURL(f)};
 $('route').onclick=()=>{if(!$('jemput').value||!$('tujuan').value)return alert('Isi Titik Jemput dan Titik Tujuan.');location.href='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent($('jemput').value)+'&destination='+encodeURIComponent($('tujuan').value)};
@@ -29,4 +160,7 @@ $('excel').onclick=()=>{let a=filtered().map(r=>({Tanggal:fd(r.tanggal),Hari:r.h
 $('saveMaster').onclick=()=>{state.master.crew=$('mCrew').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);state.master.armada=$('mArmada').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);state.master.keperluan=$('mKeperluan').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);save();master();alert('Master tersimpan di browser ini. Backend terpusat dipasang pada tahap berikutnya.')};
 document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$('page-'+b.dataset.page).classList.add('active');if(b.dataset.page==='rekap')render()});
 $('close').onclick=()=>$('modal').classList.add('hide');$('modal').onclick=e=>{if(e.target===$('modal'))$('modal').classList.add('hide')};
-today();master();render();
+today();
+master();
+render();
+loadCloud();
