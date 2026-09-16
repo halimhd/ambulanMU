@@ -338,7 +338,16 @@ $('form').onreset=()=>setTimeout(()=>{today();master()},0);
 $('foto').onchange=e=>{let f=e.target.files[0];if(!f)return;let rd=new FileReader();rd.onload=()=>{$('preview').src=rd.result;$('preview').classList.remove('hide')};rd.readAsDataURL(f)};
 $('route').onclick=()=>{if(!$('jemput').value||!$('tujuan').value)return alert('Isi Titik Jemput dan Titik Tujuan.');location.href='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent($('jemput').value)+'&destination='+encodeURIComponent($('tujuan').value)};
 $('tujuanMap').onclick=()=>{if(!$('tujuan').value)return alert('Isi Titik Tujuan.');location.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent($('tujuan').value)};
-$('quickHd').onclick=quick;$('refresh').onclick=render;$('filter').onclick=render;$('copyAll').onclick=()=>{let a=filtered();if(a.length)copy(a.map(wa).join('\n\n━━━━━━━━━━━━\n\n'));else alert('Tidak ada laporan.')};
+$('quickHd').onclick=quick;$('refresh').onclick = async () => {
+  $('refresh').textContent = '⟳ Memuat...';
+
+  try {
+    await loadCloud();
+  } finally {
+    $('refresh').textContent = '⟳ Muat ulang';
+  }
+};
+$('filter').onclick=render;$('copyAll').onclick=()=>{let a=filtered();if(a.length)copy(a.map(wa).join('\n\n━━━━━━━━━━━━\n\n'));else alert('Tidak ada laporan.')};
 $('excel').onclick=()=>{let a=filtered().map(r=>({Tanggal:fd(r.tanggal),Hari:r.hari,Waktu:r.waktu+' WIB',Nama:r.nama,Keperluan:r.keperluan,Alamat:r.alamat,'Titik Jemput':r.jemput,'Titik Tujuan':r.tujuan,Armada:r.armada,Crew:r.crew,'Kas Masuk':r.kasMasuk,'Kas Keluar':r.kasKeluar,'Ket Kas Keluar':r.ketKasKeluar,KM:r.km,Note:r.note,Foto:r.foto?'Ada':''}));if(!a.length)return alert('Tidak ada data.');let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(a),'Laporan');XLSX.writeFile(wb,'Rekap_AmbulanMu_'+iso()+'.xlsx')};
 $('saveMaster').onclick=()=>{state.master.crew=$('mCrew').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);state.master.armada=$('mArmada').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);state.master.keperluan=$('mKeperluan').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);save();master();alert('Master tersimpan di browser ini. Backend terpusat dipasang pada tahap berikutnya.')};
 document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$('page-'+b.dataset.page).classList.add('active');if(b.dataset.page==='rekap')render()});
