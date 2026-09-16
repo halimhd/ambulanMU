@@ -322,8 +322,7 @@ $('form').onsubmit = async e => {
     master();
     render();
 
-    // Ambil ulang data dari server setelah beberapa saat
-    setTimeout(loadCloud, 3000);
+   
 
   }catch(err){
     console.error(err);
