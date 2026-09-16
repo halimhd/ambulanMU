@@ -179,8 +179,35 @@ async function loadCloud(){
     const reportsData = await apiGet('reports');
     const masterData = await apiGet('master');
 
-    state.reports = reportsData.reports || [];
+    const cloudReports = reportsData.reports || [];
 
+    // Simpan laporan yang saat ini ada di browser
+    const localReports = Array.isArray(state.reports)
+      ? state.reports
+      : [];
+
+    // Gabungkan data Google Sheet + data lokal
+    // ID yang sama tidak akan dibuat dua kali
+    const combined = new Map();
+
+    cloudReports.forEach(r => {
+      if(r.id){
+        combined.set(String(r.id), r);
+      }
+    });
+
+    localReports.forEach(r => {
+      if(r.id){
+        combined.set(String(r.id), {
+          ...combined.get(String(r.id)),
+          ...r
+        });
+      }
+    });
+
+    state.reports = Array.from(combined.values());
+
+    // Master dari Google Spreadsheet
     if(masterData.master){
 
       if(
@@ -210,7 +237,10 @@ async function loadCloud(){
     master();
     render();
 
-    console.log('Data Google Spreadsheet berhasil dimuat');
+    console.log(
+      'Data cloud berhasil dimuat:',
+      cloudReports.length
+    );
 
   }catch(err){
 
@@ -219,9 +249,10 @@ async function loadCloud(){
       err
     );
 
-    // Jangan kosongkan master jika server belum tersedia
+    // Jika gagal membaca server,
+    // jangan hapus data yang sudah tampil.
     master();
-
+    render();
   }
 }
 
@@ -292,7 +323,7 @@ $('form').onsubmit = async e => {
     render();
 
     // Ambil ulang data dari server setelah beberapa saat
-    setTimeout(loadCloud, 1500);
+    setTimeout(loadCloud, 3000);
 
   }catch(err){
     console.error(err);
