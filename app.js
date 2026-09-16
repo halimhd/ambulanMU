@@ -27,12 +27,18 @@ async function loadCloud(){
     state.reports = reportsData.reports || [];
 
     if(masterData.master){
-      state.master = {
-        crew: masterData.master.crew || state.master.crew,
-        armada: masterData.master.armada || state.master.armada,
-        keperluan: masterData.master.keperluan || state.master.keperluan
-      };
-    }
+  if(Array.isArray(masterData.master.crew) && masterData.master.crew.length){
+    state.master.crew = masterData.master.crew;
+  }
+
+  if(Array.isArray(masterData.master.armada) && masterData.master.armada.length){
+    state.master.armada = masterData.master.armada;
+  }
+
+  if(Array.isArray(masterData.master.keperluan) && masterData.master.keperluan.length){
+    state.master.keperluan = masterData.master.keperluan;
+  }
+}
 
     save();
     master();
